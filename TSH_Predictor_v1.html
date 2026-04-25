@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSH Target Achievement Predictor — Post-thyroidectomy L-T4 Therapy</title>
+<style>
+:root {
+  --primary: #1f4788;
+  --primary-light: #4a7bc8;
+  --success: #2ca02c;
+  --warning: #e8a600;
+  --danger: #d62728;
+  --bg: #f7f9fc;
+  --card-bg: #ffffff;
+  --text: #1a1a2e;
+  --text-muted: #5a6c7d;
+  --border: #e1e8ed;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f7f9fc 100%);
+  color: var(--text); min-height: 100vh; padding: 24px 16px;
+  line-height: 1.6;
+}
+.container { max-width: 1080px; margin: 0 auto; }
+header {
+  background: var(--card-bg); border-radius: 14px; padding: 28px;
+  box-shadow: 0 2px 16px rgba(31,71,136,0.08); margin-bottom: 20px;
+}
+h1 { color: var(--primary); font-size: 1.55rem; margin-bottom: 6px; }
+.subtitle { color: var(--text-muted); font-size: 0.95rem; }
+.perf-badges { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;
+  background: #e8f0fe; color: var(--primary); font-weight: 500;
+}
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+.card {
+  background: var(--card-bg); border-radius: 14px; padding: 24px;
+  box-shadow: 0 2px 16px rgba(31,71,136,0.08);
+}
+.card h2 {
+  font-size: 1.1rem; color: var(--primary); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.card h2::before {
+  content: ""; width: 4px; height: 18px; background: var(--primary); border-radius: 2px;
+}
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-size: 0.88rem; font-weight: 500;
+  color: var(--text); margin-bottom: 6px;
+}
+.field .hint { font-size: 0.78rem; color: var(--text-muted); margin-left: 6px; }
+.field input[type="number"] {
+  width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
+  border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s;
+  font-family: inherit;
+}
+.field input[type="number"]:focus { outline: none; border-color: var(--primary); }
+.radio-group { display: flex; gap: 8px; }
+.radio-group label {
+  flex: 1; padding: 10px 14px; border: 1.5px solid var(--border);
+  border-radius: 8px; text-align: center; cursor: pointer;
+  transition: all 0.18s; font-weight: 500; font-size: 0.9rem;
+  margin-bottom: 0;
+}
+.radio-group input[type="radio"] { display: none; }
+.radio-group input[type="radio"]:checked + span { color: white; }
+.radio-group label:has(input:checked) {
+  background: var(--primary); border-color: var(--primary); color: white;
+}
+.btn {
+  width: 100%; padding: 12px; background: var(--primary);
+  color: white; border: none; border-radius: 8px; font-size: 1rem;
+  font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 8px;
+  font-family: inherit;
+}
+.btn:hover { background: #18365e; }
+.btn-secondary { background: #f0f2f5; color: var(--text); margin-top: 6px; }
+.btn-secondary:hover { background: #e1e8ed; }
+.result-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.result-empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+.prob-display { text-align: center; padding: 20px 0; }
+.prob-value {
+  font-size: 3.4rem; font-weight: 700; line-height: 1;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+.prob-label { font-size: 0.95rem; color: var(--text-muted); }
+.risk-tag {
+  display: inline-block; padding: 6px 16px; border-radius: 18px;
+  font-weight: 600; font-size: 0.9rem; margin-top: 10px;
+}
+.risk-high { background: #fee; color: var(--danger); }
+.risk-mid { background: #fff6e5; color: var(--warning); }
+.risk-low { background: #e9f9e9; color: var(--success); }
+.prob-bar {
+  width: 100%; height: 10px; background: #eee; border-radius: 5px;
+  margin: 14px 0 20px 0; overflow: hidden; position: relative;
+}
+.prob-bar-fill {
+  height: 100%; border-radius: 5px; transition: width 0.6s ease-out;
+  background: linear-gradient(90deg, var(--danger) 0%, var(--warning) 50%, var(--success) 100%);
+}
+.prob-bar-marker {
+  position: absolute; top: -4px; width: 3px; height: 18px;
+  background: var(--primary); transition: left 0.6s ease-out;
+}
+.interpretation {
+  background: #f7f9fc; border-left: 3px solid var(--primary);
+  padding: 12px 16px; margin-top: 14px; border-radius: 0 8px 8px 0;
+  font-size: 0.9rem; line-height: 1.65;
+}
+.interpretation strong { color: var(--primary); }
+.contribution-title {
+  font-size: 0.95rem; font-weight: 600; margin: 18px 0 10px 0; color: var(--text);
+}
+.contrib-item {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.88rem;
+}
+.contrib-label { flex: 0 0 150px; color: var(--text-muted); }
+.contrib-bar-container {
+  flex: 1; position: relative; height: 18px;
+  background: #f0f0f0; border-radius: 4px; overflow: hidden;
+}
+.contrib-bar {
+  position: absolute; top: 0; bottom: 0; transition: width 0.5s ease-out;
+  border-radius: 3px;
+}
+.contrib-bar.positive { background: var(--success); }
+.contrib-bar.negative { background: var(--danger); }
+.contrib-center {
+  position: absolute; top: 0; bottom: 0; left: 50%;
+  width: 1px; background: #666; opacity: 0.5;
+}
+.contrib-value {
+  flex: 0 0 60px; text-align: right; font-variant-numeric: tabular-nums;
+  font-weight: 500; font-size: 0.85rem;
+}
+.dose-rec {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f0f9ff 100%);
+  border-radius: 10px; padding: 16px; margin-top: 18px;
+  border: 1px solid #bbdefb;
+}
+.dose-rec-title {
+  font-size: 0.9rem; font-weight: 600; color: var(--primary); margin-bottom: 10px;
+}
+.dose-sim-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; font-size: 0.87rem;
+}
+.dose-sim-row .dose-val { color: var(--text-muted); }
+.dose-sim-row .dose-prob { font-weight: 600; font-variant-numeric: tabular-nums; }
+footer {
+  text-align: center; padding: 24px; color: var(--text-muted);
+  font-size: 0.82rem; margin-top: 24px;
+}
+footer a { color: var(--primary); text-decoration: none; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>📊 TSH Target Achievement Predictor</h1>
+  <p class="subtitle">Post-thyroidectomy initial L-T4 therapy · 7-variable logistic regression model (N=320)</p>
+  <div class="perf-badges">
+    <span class="badge">🎯 AUC 0.739 (95%CI 0.683–0.793)</span>
+    <span class="badge">✓ HL P=0.861 (well calibrated)</span>
+    <span class="badge">📏 vs ATA: NRI=+0.66, IDI=+0.13</span>
+    <span class="badge">🔒 Local computation · No data upload</span>
+  </div>
+</header>
+
+<div class="grid">
+<div class="card">
+  <h2>Patient Information</h2>
+  <form id="form">
+    <div class="field">
+      <label>Tumor diameter <span class="hint">(cm, range 0.1–4.0)</span></label>
+      <input type="number" id="tumor_size" step="0.1" min="0.1" max="10" placeholder="e.g., 0.8" value="0.8">
+    </div>
+
+    <div class="field">
+      <label>Surgical extent</label>
+      <div class="radio-group">
+        <label><input type="radio" name="total_thy" value="0" checked><span>Subtotal / Lobectomy</span></label>
+        <label><input type="radio" name="total_thy" value="1"><span>Total thyroidectomy</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Lymph-node dissection</label>
+      <div class="radio-group">
+        <label><input type="radio" name="ln_dissect" value="0" checked><span>Not performed</span></label>
+        <label><input type="radio" name="ln_dissect" value="1"><span>Performed</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Preoperative TSH <span class="hint">(mIU/L)</span></label>
+      <input type="number" id="pre_tsh" step="0.01" min="0" placeholder="e.g., 1.74" value="1.74">
+    </div>
+
+    <div class="field">
+      <label>Initial L-T4 dose <span class="hint">(μg/day) · Weight (kg) · Height (cm)</span></label>
+      <div style="display:flex;gap:8px;">
+        <input type="number" id="dose_total" step="5" min="0" placeholder="Dose μg" value="75" style="flex:1;">
+        <input type="number" id="weight_kg" step="0.5" min="0" placeholder="Weight kg" value="65" style="flex:1;">
+        <input type="number" id="height_cm" step="0.5" min="0" placeholder="Height cm" value="165" style="flex:1;">
+      </div>
+      <div class="hint" id="bsa_display" style="margin-top:4px;">BSA will be auto-calculated</div>
+    </div>
+
+    <div class="field">
+      <label>Age <span class="hint">(years)</span></label>
+      <input type="number" id="age" step="1" min="18" max="100" placeholder="e.g., 55" value="55">
+    </div>
+
+    <div class="field">
+      <label>Sex</label>
+      <div class="radio-group">
+        <label><input type="radio" name="sex" value="0" checked><span>Female</span></label>
+        <label><input type="radio" name="sex" value="1"><span>Male</span></label>
+      </div>
+    </div>
+
+    <button type="button" class="btn" onclick="predict()">Calculate prediction</button>
+    <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Prediction Result</h2>
+  <div id="result-empty" class="result-empty">
+    <div class="result-empty-icon">📉</div>
+    <p>Enter patient information on the left,<br>then click "Calculate prediction" to view the result.</p>
+  </div>
+
+  <div id="result-content" class="hidden">
+    <div class="prob-display">
+      <div class="prob-value" id="prob_value">—</div>
+      <div class="prob-label">Predicted probability of TSH target (≤2.0 mIU/L)</div>
+      <div class="risk-tag" id="risk_tag">—</div>
+    </div>
+
+    <div class="prob-bar">
+      <div class="prob-bar-fill" id="prob_bar" style="width:0%;"></div>
+      <div class="prob-bar-marker" id="prob_marker" style="left:0%;"></div>
+    </div>
+
+    <div class="contribution-title">Variable contributions to prediction (log-odds)</div>
+    <div id="contribution_list"></div>
+
+    <div class="interpretation" id="interpretation"></div>
+
+    <div class="dose-rec" id="dose_rec_block">
+      <div class="dose-rec-title">💊 Dose adjustment simulation</div>
+      <div id="dose_sim_list"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<footer>
+  <p>Logistic regression prediction model based on a 320-patient post-thyroidectomy cohort | <strong>v1.0</strong> · For clinical research reference only</p>
+  <p style="margin-top:6px;">⚠️ This tool does not replace clinical judgment. Please consult the original publication for methodology and model limitations before use.</p>
+</footer>
+
+</div>
+
+<script>
+const MODEL = {
+  intercept: -3.896867,
+  coef: {
+    tumor_size: -0.473051,
+    total_thy: -1.453337,
+    ln_dissect: 1.062458,
+    pre_tsh: -0.370566,
+    dose_per_bsa: 0.137059,
+    age: -0.009688,
+    sex: 0.091380
+  },
+  feature_names: {
+    tumor_size: 'Tumor diameter',
+    total_thy: 'Total thyroidectomy',
+    ln_dissect: 'LN dissection',
+    pre_tsh: 'Preoperative TSH',
+    dose_per_bsa: 'Dose/BSA',
+    age: 'Age',
+    sex: 'Sex'
+  }
+};
+
+function calcBSA(weight, height) {
+  return 0.0061 * height + 0.0128 * weight - 0.1529;
+}
+function logisticProb(linpred) {
+  return 1 / (1 + Math.exp(-linpred));
+}
+function calcLinpred(vars) {
+  let lp = MODEL.intercept;
+  for (const k in vars) lp += MODEL.coef[k] * vars[k];
+  return lp;
+}
+function getVars() {
+  const weight = parseFloat(document.getElementById('weight_kg').value);
+  const height = parseFloat(document.getElementById('height_cm').value);
+  const dose = parseFloat(document.getElementById('dose_total').value);
+  const bsa = calcBSA(weight, height);
+  document.getElementById('bsa_display').textContent =
+    `BSA = ${bsa.toFixed(3)} m² | Dose/BSA = ${(dose/bsa).toFixed(1)} μg/m²/day`;
+  return {
+    tumor_size: parseFloat(document.getElementById('tumor_size').value),
+    total_thy: parseFloat(document.querySelector('input[name="total_thy"]:checked').value),
+    ln_dissect: parseFloat(document.querySelector('input[name="ln_dissect"]:checked').value),
+    pre_tsh: parseFloat(document.getElementById('pre_tsh').value),
+    dose_per_bsa: dose / bsa,
+    age: parseFloat(document.getElementById('age').value),
+    sex: parseFloat(document.querySelector('input[name="sex"]:checked').value)
+  };
+}
+function predict() {
+  const vars = getVars();
+  for (const k in vars) {
+    if (isNaN(vars[k])) { alert('Please complete all fields.'); return; }
+  }
+  const lp = calcLinpred(vars);
+  const prob = logisticProb(lp);
+  const pct = (prob * 100).toFixed(1);
+  document.getElementById('result-empty').classList.add('hidden');
+  document.getElementById('result-content').classList.remove('hidden');
+  document.getElementById('prob_value').textContent = pct + '%';
+  document.getElementById('prob_bar').style.width = pct + '%';
+  document.getElementById('prob_marker').style.left = pct + '%';
+  const tag = document.getElementById('risk_tag');
+  let tagText, tagClass, interp;
+  if (prob >= 0.70) {
+    tagText = 'High probability of target achievement'; tagClass = 'risk-low';
+    interp = '<strong>Result: High probability of TSH target achievement.</strong> The current dose appears well matched to patient baseline characteristics. Routine TSH check at 4–6 weeks is recommended.';
+  } else if (prob >= 0.45) {
+    tagText = 'Moderate probability'; tagClass = 'risk-mid';
+    interp = '<strong>Result: Moderate probability of TSH target achievement.</strong> Close monitoring is advised; consider timely dose adjustment after the first TSH measurement.';
+  } else {
+    tagText = 'Low probability'; tagClass = 'risk-high';
+    interp = '<strong>Result: Low probability of TSH target achievement.</strong> Consider revisiting initial dose, scheduling earlier TSH check (2–4 weeks), or evaluating other factors (adherence, drug interactions, malabsorption).';
+  }
+  tag.textContent = tagText;
+  tag.className = 'risk-tag ' + tagClass;
+  document.getElementById('interpretation').innerHTML = interp;
+  renderContributions(vars);
+  renderDoseSimulation(vars);
+}
+function renderContributions(vars) {
+  const contribs = [];
+  for (const k in vars) {
+    const c = MODEL.coef[k] * vars[k];
+    contribs.push({ key: k, name: MODEL.feature_names[k], value: c });
+  }
+  contribs.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+  const maxAbs = Math.max(...contribs.map(c => Math.abs(c.value)), 0.5);
+  const list = document.getElementById('contribution_list');
+  list.innerHTML = '';
+  for (const c of contribs) {
+    const item = document.createElement('div');
+    item.className = 'contrib-item';
+    const pct = Math.abs(c.value) / maxAbs * 50;
+    const isPos = c.value > 0;
+    const left = isPos ? 50 : (50 - pct);
+    const barClass = isPos ? 'positive' : 'negative';
+    item.innerHTML = `
+      <div class="contrib-label">${c.name}</div>
+      <div class="contrib-bar-container">
+        <div class="contrib-bar ${barClass}" style="left:${left}%; width:${pct}%;"></div>
+        <div class="contrib-center"></div>
+      </div>
+      <div class="contrib-value" style="color:${isPos?'var(--success)':'var(--danger)'}">
+        ${c.value >= 0 ? '+' : ''}${c.value.toFixed(2)}
+      </div>
+    `;
+    list.appendChild(item);
+  }
+}
+function renderDoseSimulation(vars) {
+  const weight = parseFloat(document.getElementById('weight_kg').value);
+  const height = parseFloat(document.getElementById('height_cm').value);
+  const bsa = calcBSA(weight, height);
+  const doses = [35, 40, 42.5, 45, 47.5, 50, 52.5, 55];
+  const list = document.getElementById('dose_sim_list');
+  list.innerHTML = '';
+  for (const d_bsa of doses) {
+    const testVars = {...vars, dose_per_bsa: d_bsa};
+    const lp = calcLinpred(testVars);
+    const p = logisticProb(lp);
+    const totalDose = d_bsa * bsa;
+    const perKg = totalDose / weight;
+    const item = document.createElement('div');
+    item.className = 'dose-sim-row';
+    const isCurrent = Math.abs(d_bsa - vars.dose_per_bsa) < 1.5;
+    item.innerHTML = `
+      <div class="dose-val">
+        ${d_bsa} μg/m²/d (≈${totalDose.toFixed(0)} μg/d, ${perKg.toFixed(2)} μg/kg/d)
+        ${isCurrent ? '<strong style="color:var(--primary)"> ← current</strong>' : ''}
+      </div>
+      <div class="dose-prob" style="color:${p>=0.7?'var(--success)':p>=0.45?'var(--warning)':'var(--danger)'}">
+        ${(p*100).toFixed(1)}%
+      </div>
+    `;
+    list.appendChild(item);
+  }
+}
+function resetForm() {
+  document.getElementById('form').reset();
+  document.getElementById('result-empty').classList.remove('hidden');
+  document.getElementById('result-content').classList.add('hidden');
+  document.getElementById('bsa_display').textContent = 'BSA will be auto-calculated';
+}
+['weight_kg','height_cm','dose_total'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    const w = parseFloat(document.getElementById('weight_kg').value);
+    const h = parseFloat(document.getElementById('height_cm').value);
+    const d = parseFloat(document.getElementById('dose_total').value);
+    if (w && h) {
+      const bsa = calcBSA(w, h);
+      document.getElementById('bsa_display').textContent =
+        `BSA = ${bsa.toFixed(3)} m²` + (d ? ` | Dose/BSA = ${(d/bsa).toFixed(1)} μg/m²/day` : '');
+    }
+  });
+});
+document.getElementById('weight_kg').dispatchEvent(new Event('input'));
+</script>
+</body>
+</html>
